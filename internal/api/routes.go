@@ -109,6 +109,7 @@ func (s *Server) registerRoutes(h *hertzserver.Hertz) {
 		api.GET("/settings", apiHandlers.HandleSettingsGet)
 		api.PUT("/settings/user", apiHandlers.HandleSettingsUserUpdate)
 		api.PUT("/settings/workspace", apiHandlers.HandleSettingsWorkspaceUpdate)
+		api.POST("/models/list", apiHandlers.HandleModelList)
 		api.GET("/status", apiHandlers.HandleStatus)
 	}
 
