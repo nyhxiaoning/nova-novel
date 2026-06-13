@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { ReactNode } from 'react'
-import { ChevronDown, ChevronUp, Plus, Save, Settings as SettingsIcon, Trash2, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Download, Plus, Save, Settings as SettingsIcon, Trash2, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { LayeredSettings, ModelProfileSettings, Settings, SettingsLayer } from './types'
-import { fetchSettings, updateUserSettings, updateWorkspaceSettings } from './api'
+import { fetchModelList, fetchSettings, updateUserSettings, updateWorkspaceSettings } from './api'
+import type { RemoteModel } from './api'
+import { MODEL_PROVIDERS, CUSTOM_PROVIDER_ID, findProvider } from './model-providers'
 import { FONT_OPTIONS, fontLabelKeyFor } from './font-options'
 import { settingsForLayer, useAutoSaveSettings } from './use-auto-save-settings'
 import { getInteractiveTellers } from '@/features/interactive/api'
@@ -166,8 +168,13 @@ export function SettingsView({ onClose }: { onClose?: () => void }) {
                 onChange={(v) => setField('openai_api_key', v)} type="password" />
           <Text label="Base URL" value={draft.openai_base_url} placeholder={placeholderFor('openai_base_url')}
                 onChange={(v) => setField('openai_base_url', v)} />
-          <Text label={t('common.model')} value={draft.openai_model} placeholder={placeholderFor('openai_model')}
-                onChange={(v) => setField('openai_model', v)} />
+          <DefaultModelField
+            value={draft.openai_model}
+            baseUrl={draft.openai_base_url ?? ''}
+            apiKey={draft.openai_api_key ?? ''}
+            placeholder={placeholderFor('openai_model')}
+            onChange={(v) => setField('openai_model', v)}
+          />
           <ModelProfilesEditor
             profiles={draft.model_profiles ?? []}
             effectiveProfiles={effective.model_profiles ?? []}
@@ -735,60 +742,13 @@ function ModelProfilesEditor({ profiles, effectiveProfiles, onChange }: {
           </div>
         )}
         {profiles.map((profile, index) => (
-          <div key={`${profile.id ?? 'profile'}-${index}`} className="grid gap-2 rounded-[var(--nova-radius)] border border-[var(--nova-border)] bg-[var(--nova-surface-2)] p-2 md:grid-cols-2">
-            <input
-              value={profile.id ?? ''}
-              placeholder={t('settings.model.profileIdPlaceholder')}
-              onChange={(e) => updateProfile(index, { id: e.target.value })}
-              className={fieldCls}
-            />
-            <input
-              value={profile.name ?? ''}
-              placeholder={t('settings.model.profileNamePlaceholder')}
-              onChange={(e) => updateProfile(index, { name: e.target.value })}
-              className={fieldCls}
-            />
-            <input
-              value={profile.openai_base_url ?? ''}
-              placeholder={t('common.baseUrl')}
-              onChange={(e) => updateProfile(index, { openai_base_url: e.target.value })}
-              className={fieldCls}
-            />
-            <input
-              value={profile.openai_model ?? ''}
-              placeholder={t('settings.model.profileModelIdPlaceholder')}
-              onChange={(e) => updateProfile(index, { openai_model: e.target.value })}
-              className={fieldCls}
-            />
-            <input
-              type="password"
-              value={profile.openai_api_key ?? ''}
-              placeholder={t('settings.model.profileKeyInheritPlaceholder')}
-              onChange={(e) => updateProfile(index, { openai_api_key: e.target.value })}
-              className={fieldCls}
-            />
-            <div className="flex gap-2">
-              <input
-                type="number"
-                step={0.1}
-                min={0}
-                max={2}
-                value={profile.temperature ?? ''}
-                placeholder={t('settings.model.profileTemperatureDefaultPlaceholder')}
-                onChange={(e) => updateProfile(index, { temperature: e.target.value === '' ? null : Number(e.target.value) })}
-                className={fieldCls}
-              />
-              <button
-                type="button"
-                onClick={() => removeProfile(index)}
-                className={`${iconButtonCls} shrink-0 border border-[var(--nova-border)] p-1.5`}
-                aria-label={t('settings.model.deleteProfile')}
-                title={t('settings.model.deleteProfile')}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
+          <ModelProfileCard
+            key={`${profile.id ?? 'profile'}-${index}`}
+            profile={profile}
+            index={index}
+            onUpdate={updateProfile}
+            onRemove={removeProfile}
+          />
         ))}
         <button
           type="button"
@@ -798,6 +758,254 @@ function ModelProfilesEditor({ profiles, effectiveProfiles, onChange }: {
           <Plus className="h-3.5 w-3.5" />
           {t('settings.model.addProfile')}
         </button>
+      </div>
+    </div>
+  )
+}
+
+function detectProviderId(baseUrl: string): string {
+  const normalized = baseUrl.toLowerCase().replace(/\/+$/, '')
+  for (const p of MODEL_PROVIDERS) {
+    const pNormalized = p.baseUrl.toLowerCase().replace(/\/+$/, '')
+    if (normalized === pNormalized || normalized.startsWith(pNormalized)) {
+      return p.id
+    }
+  }
+  return CUSTOM_PROVIDER_ID
+}
+
+function DefaultModelField({ value, baseUrl, apiKey, placeholder, onChange }: {
+  value?: string
+  baseUrl: string
+  apiKey: string
+  placeholder: string
+  onChange: (v: string) => void
+}) {
+  const { t } = useTranslation()
+  const [remoteModels, setRemoteModels] = useState<RemoteModel[]>([])
+  const [fetching, setFetching] = useState(false)
+  const [fetchError, setFetchError] = useState('')
+
+  const handleFetch = async () => {
+    if (!baseUrl || !apiKey) return
+    setFetching(true)
+    setFetchError('')
+    try {
+      const models = await fetchModelList(baseUrl, apiKey)
+      setRemoteModels(models)
+    } catch (err: any) {
+      setFetchError(err?.message || 'Failed to fetch models')
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  const sortedModels = [...remoteModels].sort((a, b) => a.id.localeCompare(b.id))
+  const currentVal = value ?? ''
+
+  return (
+    <FieldRow label={t('common.model')}>
+      <div className="flex flex-1 flex-col gap-1">
+        <div className="flex items-center gap-1.5">
+          {sortedModels.length > 0 ? (
+            <select
+              value={currentVal}
+              onChange={(e) => onChange(e.target.value)}
+              className={`${fieldCls} flex-1`}
+            >
+              <option value="">{placeholder}</option>
+              {sortedModels.map((m) => (
+                <option key={m.id} value={m.id}>{m.id}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              value={currentVal}
+              placeholder={placeholder}
+              onChange={(e) => onChange(e.target.value)}
+              className={`${fieldCls} flex-1`}
+            />
+          )}
+          <button
+            type="button"
+            onClick={handleFetch}
+            disabled={fetching || !baseUrl || !apiKey}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--nova-radius)] border border-[var(--nova-border)] bg-[var(--nova-surface)] px-2.5 py-1.5 text-xs text-[var(--nova-text)] hover:bg-[var(--nova-surface-2)] disabled:opacity-50 disabled:cursor-not-allowed"
+            title={t('settings.model.fetchModels')}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {fetching ? t('settings.model.fetching') : t('settings.model.fetchModels')}
+          </button>
+        </div>
+        {fetchError && (
+          <div className="text-xs text-red-500">{fetchError}</div>
+        )}
+        {sortedModels.length > 0 && (
+          <div className="text-[10px] text-[var(--nova-text-faint)]">
+            {t('settings.model.fetchedCount', { count: sortedModels.length })}
+          </div>
+        )}
+      </div>
+    </FieldRow>
+  )
+}
+
+function ModelProfileCard({ profile, index, onUpdate, onRemove }: {
+  profile: ModelProfileSettings
+  index: number
+  onUpdate: (index: number, patch: Partial<ModelProfileSettings>) => void
+  onRemove: (index: number) => void
+}) {
+  const { t } = useTranslation()
+  const baseUrl = profile.openai_base_url ?? ''
+  const apiKey = profile.openai_api_key ?? ''
+  const currentModel = profile.openai_model ?? ''
+
+  const [providerId, setProviderId] = useState<string>(() => detectProviderId(baseUrl))
+  const [remoteModels, setRemoteModels] = useState<RemoteModel[]>([])
+  const [fetching, setFetching] = useState(false)
+  const [fetchError, setFetchError] = useState('')
+
+  const handleProviderChange = (newProviderId: string) => {
+    setProviderId(newProviderId)
+    setRemoteModels([])
+    setFetchError('')
+    if (newProviderId === CUSTOM_PROVIDER_ID) return
+    const provider = findProvider(newProviderId)
+    if (provider) {
+      onUpdate(index, {
+        openai_base_url: provider.baseUrl,
+        openai_model: provider.defaultModel ?? '',
+        name: profile.name || provider.name,
+        id: profile.id || newProviderId,
+      })
+    }
+  }
+
+  const handleFetchModels = async () => {
+    if (!baseUrl || !apiKey) return
+    setFetching(true)
+    setFetchError('')
+    try {
+      const models = await fetchModelList(baseUrl, apiKey)
+      setRemoteModels(models)
+    } catch (err: any) {
+      setFetchError(err?.message || 'Failed to fetch models')
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  const sortedModels = [...remoteModels].sort((a, b) => a.id.localeCompare(b.id))
+
+  return (
+    <div className="flex flex-col gap-2 rounded-[var(--nova-radius)] border border-[var(--nova-border)] bg-[var(--nova-surface-2)] p-2">
+      <div className="grid gap-2 md:grid-cols-2">
+        <select
+          value={providerId}
+          onChange={(e) => handleProviderChange(e.target.value)}
+          className={fieldCls}
+        >
+          <option value={CUSTOM_PROVIDER_ID}>{t('settings.model.providerCustom')}</option>
+          {MODEL_PROVIDERS.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+        <input
+          value={profile.id ?? ''}
+          placeholder={t('settings.model.profileIdPlaceholder')}
+          onChange={(e) => onUpdate(index, { id: e.target.value })}
+          className={fieldCls}
+        />
+      </div>
+      <div className="grid gap-2 md:grid-cols-2">
+        <input
+          value={profile.name ?? ''}
+          placeholder={t('settings.model.profileNamePlaceholder')}
+          onChange={(e) => onUpdate(index, { name: e.target.value })}
+          className={fieldCls}
+        />
+        <input
+          value={baseUrl}
+          placeholder={t('common.baseUrl')}
+          onChange={(e) => {
+            onUpdate(index, { openai_base_url: e.target.value })
+            setProviderId(detectProviderId(e.target.value))
+          }}
+          className={fieldCls}
+        />
+      </div>
+      <div className="grid gap-2 md:grid-cols-2">
+        <input
+          type="password"
+          value={apiKey}
+          placeholder={t('settings.model.profileKeyInheritPlaceholder')}
+          onChange={(e) => onUpdate(index, { openai_api_key: e.target.value })}
+          className={fieldCls}
+        />
+        <div className="flex gap-1.5">
+          <input
+            type="number"
+            step={0.1}
+            min={0}
+            max={2}
+            value={profile.temperature ?? ''}
+            placeholder={t('settings.model.profileTemperatureDefaultPlaceholder')}
+            onChange={(e) => onUpdate(index, { temperature: e.target.value === '' ? null : Number(e.target.value) })}
+            className={fieldCls}
+          />
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            className={`${iconButtonCls} shrink-0 border border-[var(--nova-border)] p-1.5`}
+            aria-label={t('settings.model.deleteProfile')}
+            title={t('settings.model.deleteProfile')}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5 border-t border-[var(--nova-border)] pt-2">
+        <div className="flex items-center gap-2">
+          {sortedModels.length > 0 ? (
+            <select
+              value={currentModel}
+              onChange={(e) => onUpdate(index, { openai_model: e.target.value })}
+              className={`${fieldCls} flex-1`}
+            >
+              <option value="">{t('settings.model.selectModel')}</option>
+              {sortedModels.map((m) => (
+                <option key={m.id} value={m.id}>{m.id}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              value={currentModel}
+              placeholder={t('settings.model.profileModelIdPlaceholder')}
+              onChange={(e) => onUpdate(index, { openai_model: e.target.value })}
+              className={`${fieldCls} flex-1`}
+            />
+          )}
+          <button
+            type="button"
+            onClick={handleFetchModels}
+            disabled={fetching || !baseUrl || !apiKey}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--nova-radius)] border border-[var(--nova-border)] bg-[var(--nova-surface)] px-2.5 py-1.5 text-xs text-[var(--nova-text)] hover:bg-[var(--nova-surface-2)] disabled:opacity-50 disabled:cursor-not-allowed"
+            title={t('settings.model.fetchModels')}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {fetching ? t('settings.model.fetching') : t('settings.model.fetchModels')}
+          </button>
+        </div>
+        {fetchError && (
+          <div className="text-xs text-red-500">{fetchError}</div>
+        )}
+        {sortedModels.length > 0 && (
+          <div className="text-[10px] text-[var(--nova-text-faint)]">
+            {t('settings.model.fetchedCount', { count: sortedModels.length })}
+          </div>
+        )}
       </div>
     </div>
   )
