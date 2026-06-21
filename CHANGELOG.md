@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - 新增 6 个内置叙事方案：悬疑推理（mystery）、轻松喜剧（comedy）、史诗冒险（epic）、浪漫言情（romance）、生存惊悚（survival）、武侠江湖（wuxia），覆盖常见小说类型的叙事编排需求。
 - 模型配置新增内置常见 Provider（DeepSeek、Kimi、Qwen、NVIDIA、OpenAI、SiliconFlow），选择 Provider 后自动填充 Base URL；输入 API Key 后可一键拉取可用模型列表，从下拉菜单选择模型，无需手动输入模型 ID。默认模型和多模型配置均支持「拉取模型」按钮。
+- 修复模型 Base URL 缺少 `/v1` 后缀导致 401 认证失败的问题：Provider 预设 URL 均已补全 `/v1`，后端加载配置时自动补全缺失的 `/v1` 后缀。
+- 全局主题切换器：右上角新增主题按钮，支持深色、浅色、书本黄、米黄、灰白 5 种页面背景主题，选择即时生效；设置页「公共配置 > 主题」同步展示为可视化色块选择器，后端 `normalizeTheme` 同步支持新主题值。
 - Agent loop 新增 `LoopPolicy`、`ContextLedger` 和 `.nova/runs` 运行账本，按轮记录上下文来源、大小上限、事件摘要和完成状态，为后续工具筛选、恢复和验证阶段提供稳定工程边界。
 - Agent loop 新增中心化 tool manifest 与模型可见工具结果筛选，统一标注工具来源、是否变更 workspace、输出上限、幂等键和 post-check 要求，并对 invokable/streamable 工具返回做有界回填。
 - 创作 Agent 新增写入后轻量验证阶段，会根据工具 mutation metadata 检查写入路径、章节目录约束、资料库 `brief_description` 和删除结果，并写入 `.nova/runs` trace。

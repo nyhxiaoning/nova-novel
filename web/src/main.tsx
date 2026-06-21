@@ -28,7 +28,7 @@ void bootstrapLocale().finally(() => {
   createRoot(root).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem themes={['light', 'dark']}>
+        <ThemeProvider attribute="data-theme" defaultTheme="dark" enableSystem themes={['light', 'dark', 'book-yellow', 'beige', 'gray-white']}>
           <TooltipProvider>
             <RuntimeErrorBoundary>
               <App />

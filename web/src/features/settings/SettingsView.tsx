@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import type { LayeredSettings, ModelProfileSettings, Settings, SettingsLayer } from './types'
 import { fetchModelList, fetchSettings, updateUserSettings, updateWorkspaceSettings } from './api'
 import type { RemoteModel } from './api'
-import { MODEL_PROVIDERS, CUSTOM_PROVIDER_ID, findProvider } from './model-providers'
+import { MODEL_PROVIDERS, CUSTOM_PROVIDER_ID, findProvider, normalizeBaseUrl } from './model-providers'
 import { FONT_OPTIONS, fontLabelKeyFor } from './font-options'
 import { settingsForLayer, useAutoSaveSettings } from './use-auto-save-settings'
 import { getInteractiveTellers } from '@/features/interactive/api'
@@ -131,9 +131,9 @@ export function SettingsView({ onClose }: { onClose?: () => void }) {
           <LanguageSelect label={t('settings.appearance.language')} value={draft.language}
                           effective={effective.language}
                           onChange={(v) => setField('language', v)} />
-          <ThemeSelect label={t('settings.appearance.theme')} value={draft.theme}
-                       effective={effective.theme}
-                       onChange={(v) => setField('theme', v)} />
+          <ThemePickerField label={t('settings.appearance.theme')} value={draft.theme}
+                            effective={effective.theme}
+                            onChange={(v) => setField('theme', v)} />
           {activeLayer === 'user' && (
             <MotionIntensitySelect label={t('settings.appearance.motionIntensity')} value={draft.motion_intensity}
                                    effective={effective.motion_intensity}
@@ -628,9 +628,12 @@ function LanguageSelect({ label, value, effective, onChange }: {
 }
 
 const THEME_OPTIONS = [
-  { value: 'dark', labelKey: 'settings.theme.dark' },
-  { value: 'light', labelKey: 'settings.theme.light' },
-  { value: 'system', labelKey: 'settings.theme.system' },
+  { value: 'dark', labelKey: 'settings.theme.dark', color: '#1a1a1a', ring: '#525252' },
+  { value: 'light', labelKey: 'settings.theme.light', color: '#edf1f5', ring: '#cbd4df' },
+  { value: 'book-yellow', labelKey: 'theme.bookYellow', color: '#f5edd6', ring: '#d4c9a8' },
+  { value: 'beige', labelKey: 'theme.beige', color: '#f2ece3', ring: '#cfc5b5' },
+  { value: 'gray-white', labelKey: 'theme.grayWhite', color: '#f0f0f2', ring: '#d0d0d5' },
+  { value: 'system', labelKey: 'settings.theme.system', color: 'linear-gradient(135deg, #1a1a1a 50%, #edf1f5 50%)', ring: '#888' },
 ] as const
 
 const MOTION_INTENSITY_OPTIONS = [
@@ -640,7 +643,7 @@ const MOTION_INTENSITY_OPTIONS = [
   { value: 'off', labelKey: 'settings.motion.off' },
 ] as const
 
-function ThemeSelect({ label, value, effective, onChange }: {
+function ThemePickerField({ label, value, effective, onChange }: {
   label: string
   value?: string
   effective?: string
@@ -648,19 +651,40 @@ function ThemeSelect({ label, value, effective, onChange }: {
 }) {
   const { t } = useTranslation()
   const effectiveValue = effective || 'dark'
-  const effectiveLabel = t(THEME_OPTIONS.find((option) => option.value === effectiveValue)?.labelKey || 'settings.theme.dark')
   return (
     <FieldRow label={label}>
-      <select
-        value={value ?? ''}
-        onChange={(e) => onChange(e.target.value)}
-        className={fieldCls}
-      >
-        <option value="">{t('common.inherit', { value: effectiveLabel })}</option>
-        {THEME_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>{t(option.labelKey)}</option>
-        ))}
-      </select>
+      <div className="flex flex-1 flex-col gap-1.5">
+        <div className="flex items-center gap-1.5">
+          {THEME_OPTIONS.map((option) => {
+            const isActive = (value ?? '') === option.value
+            const isInherit = (value ?? '') === '' && effectiveValue === option.value
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onChange(option.value)}
+                className="group relative flex items-center gap-1.5 rounded-[var(--nova-radius)] border px-2 py-1 text-xs transition-colors"
+                style={{
+                  borderColor: isActive || isInherit ? 'var(--nova-accent-blue)' : 'var(--nova-border)',
+                  background: isActive || isInherit ? 'var(--nova-surface-3)' : 'transparent',
+                }}
+                title={t(option.labelKey)}
+              >
+                <span
+                  className="h-3 w-3 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.12)]"
+                  style={{ background: option.color }}
+                />
+                <span className="hidden text-[var(--nova-text-muted)] sm:inline">{t(option.labelKey)}</span>
+              </button>
+            )
+          })}
+        </div>
+        {(value ?? '') === '' && (
+          <div className="text-[10px] text-[var(--nova-text-faint)]">
+            {t('common.inherit', { value: t(THEME_OPTIONS.find((o) => o.value === effectiveValue)?.labelKey || 'settings.theme.dark') })}
+          </div>
+        )}
+      </div>
     </FieldRow>
   )
 }
@@ -874,7 +898,7 @@ function ModelProfileCard({ profile, index, onUpdate, onRemove }: {
     const provider = findProvider(newProviderId)
     if (provider) {
       onUpdate(index, {
-        openai_base_url: provider.baseUrl,
+        openai_base_url: normalizeBaseUrl(provider.baseUrl),
         openai_model: provider.defaultModel ?? '',
         name: profile.name || provider.name,
         id: profile.id || newProviderId,

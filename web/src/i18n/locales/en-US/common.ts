@@ -26,6 +26,12 @@ const common = {
   'common.chapters': '{{count}} chapters',
   'common.messages': '{{count}} messages',
   'common.items': '{{count}} items',
+  'theme.label': 'Theme',
+  'theme.dark': 'Dark',
+  'theme.light': 'Light',
+  'theme.bookYellow': 'Book Yellow',
+  'theme.beige': 'Beige',
+  'theme.grayWhite': 'Gray White',
 } as const
 
 export default common

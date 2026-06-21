@@ -4,6 +4,7 @@ import { BookMarked, BookOpen, Bot, Clock3, Database, History, MessageSquareText
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { WorkspaceLayout } from '@/components/layout/workspace-layout'
 import { TooltipIconButton } from '@/components/common/tooltip-icon-button'
+import { ThemePicker } from '@/components/common/ThemePicker'
 import { novaSpring } from '@/features/motion/motion-tokens'
 import type { ChapterSummary, WorkspaceSummary } from '@/lib/api'
 import type { RightPanel, WorkspaceMode } from '@/stores/workspace-store'
@@ -173,6 +174,7 @@ export function WorkbenchShell({
       </div>
       <div className="nova-ui-compact flex items-center justify-end gap-2 text-[var(--nova-text-faint)]">
         <span>{modeLabel}</span>
+        <ThemePicker />
       </div>
     </header>
   )

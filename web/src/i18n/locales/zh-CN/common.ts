@@ -26,6 +26,12 @@ const common = {
   'common.chapters': '{{count}} 章',
   'common.messages': '{{count}} 条消息',
   'common.items': '{{count}} 项',
+  'theme.label': '主题',
+  'theme.dark': '深色',
+  'theme.light': '浅色',
+  'theme.bookYellow': '书本黄',
+  'theme.beige': '米黄',
+  'theme.grayWhite': '灰白',
 } as const
 
 export default common

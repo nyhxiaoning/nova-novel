@@ -646,7 +646,7 @@ function toWritingRightPanel(panel: RightPanel): WritingRightPanel {
 }
 
 function normalizeAppTheme(theme?: string) {
-  if (theme === 'light' || theme === 'dark' || theme === 'system') return theme
+  if (theme === 'light' || theme === 'dark' || theme === 'system' || theme === 'book-yellow' || theme === 'beige' || theme === 'gray-white') return theme
   return 'dark'
 }
 

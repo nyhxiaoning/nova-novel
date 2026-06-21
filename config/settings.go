@@ -349,7 +349,7 @@ func normalizeLanguage(language string) string {
 
 func normalizeTheme(theme string) string {
 	switch theme {
-	case "", "system", "dark", "light":
+	case "", "system", "dark", "light", "book-yellow", "beige", "gray-white":
 		return theme
 	default:
 		return ""

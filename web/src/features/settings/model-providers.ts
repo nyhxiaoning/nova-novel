@@ -6,8 +6,8 @@ export interface ModelProvider {
 }
 
 export const MODEL_PROVIDERS: ModelProvider[] = [
-  { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com', defaultModel: 'deepseek-chat' },
-  { id: 'kimi', name: 'Kimi (Moonshot)', baseUrl: 'https://api.moonshot.cn', defaultModel: 'moonshot-v1-8k' },
+  { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', defaultModel: 'deepseek-chat' },
+  { id: 'kimi', name: 'Kimi (Moonshot)', baseUrl: 'https://api.moonshot.cn/v1', defaultModel: 'moonshot-v1-8k' },
   { id: 'qwen', name: 'Qwen (DashScope)', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode', defaultModel: 'qwen-plus' },
   { id: 'nvidia', name: 'NVIDIA NIM', baseUrl: 'https://integrate.api.nvidia.com/v1', defaultModel: 'meta/llama-3.1-8b-instruct' },
   { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-4o' },
@@ -18,4 +18,10 @@ export const CUSTOM_PROVIDER_ID = '_custom'
 
 export function findProvider(id: string): ModelProvider | undefined {
   return MODEL_PROVIDERS.find((p) => p.id === id)
+}
+
+export function normalizeBaseUrl(url: string): string {
+  const trimmed = url.replace(/\/+$/, '')
+  if (trimmed.endsWith('/v1')) return trimmed
+  return trimmed + '/v1'
 }

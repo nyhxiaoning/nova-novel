@@ -88,7 +88,7 @@ func ResolveAgentModel(cfg *Config, agentKind string) ResolvedModelSettings {
 		profile.OpenAIAPIKey = cfg.OpenAIAPIKey
 	}
 	if profile.OpenAIBaseURL == "" {
-		profile.OpenAIBaseURL = cfg.OpenAIBaseURL
+		profile.OpenAIBaseURL = normalizeOpenAIBaseURL(cfg.OpenAIBaseURL)
 	}
 	if profile.OpenAIModel == "" {
 		profile.OpenAIModel = cfg.OpenAIModel
@@ -151,7 +151,7 @@ func mergeModelProfile(parent, child ModelProfileSettings) ModelProfileSettings 
 		out.OpenAIAPIKey = child.OpenAIAPIKey
 	}
 	if child.OpenAIBaseURL != "" {
-		out.OpenAIBaseURL = child.OpenAIBaseURL
+		out.OpenAIBaseURL = normalizeOpenAIBaseURL(child.OpenAIBaseURL)
 	}
 	if child.OpenAIModel != "" {
 		out.OpenAIModel = child.OpenAIModel
@@ -198,6 +198,18 @@ func legacyModelProfile(cfg *Config) ModelProfileSettings {
 
 func normalizeModelProfileID(id string) string {
 	return strings.TrimSpace(id)
+}
+
+func normalizeOpenAIBaseURL(url string) string {
+	url = strings.TrimSpace(url)
+	url = strings.TrimRight(url, "/")
+	if url == "" {
+		return url
+	}
+	if !strings.HasSuffix(url, "/v1") {
+		url = url + "/v1"
+	}
+	return url
 }
 
 func normalizeReasoningEffort(value string) string {
