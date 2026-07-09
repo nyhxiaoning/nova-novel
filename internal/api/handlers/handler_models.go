@@ -49,6 +49,7 @@ func (h *Handlers) HandleModelList(ctx context.Context, c *app.RequestContext) {
 	}
 
 	baseURL = strings.TrimRight(baseURL, "/")
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 	modelsURL := baseURL + "/v1/models"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, modelsURL, nil)

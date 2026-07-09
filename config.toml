@@ -1,65 +1,80 @@
-# Nova 配置文件模板
+# Nova 配置文件
 # 三层加载优先级（低 → 高）：
 #   1. 内置默认值
-#   2. 全局启动配置：项目根或可执行文件旁 config.toml（用于 nova_dir 等启动级参数）
+#   2. 全局启动配置：项目根或可执行文件旁 config.toml
 #   3. 用户级：<nova_dir>/config.toml
 #   4. 工作区级：<workspace>/.nova/config.toml
-# 环境变量（OPENAI_API_KEY、OPENAI_MODEL 等）始终最高优先级，仅运行时覆盖，不写盘。
+# 环境变量（OPENAI_API_KEY 等）始终最高优先级，仅运行时覆盖，不写盘。
 #
 # 字段留空表示继承上层。
-# nova_dir 仅在全局启动配置或 NOVA_DIR 环境变量中生效；用户级/工作区级会忽略并过滤该字段。
+# nova_dir 仅在全局启动配置或 NOVA_DIR 环境变量中生效；用户级/工作区级会忽略。
+#
+# 模型切换说明：
+# - 不配置 [[model_profiles]] 时，所有 Agent 使用顶部默认模型
+# - 配置 [[model_profiles]] 后，可在 Web UI 设置中为每个 Agent 分配不同模型
+# - 也可在此文件直接为 Agent 指定 profile_id，不填则使用默认模型
 
-# 模型
+# ============================
+# 默认模型（fallback）
+# ============================
 openai_api_key = ""
 openai_base_url = "https://api.deepseek.com"
 openai_model = "deepseek-v4-pro"
 
-# 可选：配置多个 OpenAI 协议兼容平台，并按 Agent 分配。
-# 不配置 temperature 时使用平台/模型默认值。
-# 快捷选项 Agent 和版本说明 Agent 内置默认 enable_thinking=false，其他 Agent 默认不传思考参数。
-#
+# ============================
+# 多模型配置
+# 在 Web UI 设置 > 模型 中新增即可，重启后都会保留到这里。
+# 也可手动在此添加，以下是几个常用示例：
+# ============================
+
 # [[model_profiles]]
 # id = "deepseek"
 # name = "DeepSeek"
 # openai_api_key = ""
 # openai_base_url = "https://api.deepseek.com"
 # openai_model = "deepseek-v4-pro"
-#
+
 # [[model_profiles]]
 # id = "openai"
 # name = "OpenAI"
 # openai_api_key = ""
 # openai_base_url = "https://api.openai.com/v1"
-# openai_model = "gpt-4.1"
-#
+# openai_model = "gpt-4o"
+
+# [[model_profiles]]
+# id = "siliconflow"
+# name = "SiliconFlow"
+# openai_api_key = ""
+# openai_base_url = "https://api.siliconflow.cn/v1"
+# openai_model = "deepseek-ai/DeepSeek-V3"
+
+# [[model_profiles]]
+# id = "qwen"
+# name = "Qwen (DashScope)"
+# openai_api_key = ""
+# openai_base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+# openai_model = "qwen-plus"
+
+# [[model_profiles]]
+# id = "kimi"
+# name = "Kimi (Moonshot)"
+# openai_api_key = ""
+# openai_base_url = "https://api.moonshot.cn/v1"
+# openai_model = "moonshot-v1-8k"
+
+# ============================
+# Agent 模型分配
+# 不填则使用顶部默认模型。
+# 填 profile_id 则使用对应 [[model_profiles]] 的配置。
+# ============================
+
 # [agent_models.ide]
 # profile_id = "deepseek"
 # temperature = 0.7
-# enable_thinking = true       # 可选：不填则不传；适用于支持 enable_thinking 的 OpenAI 兼容平台
-# reasoning_effort = "medium"  # 可选：low / medium / high；不填则不传
-#
-# [agent_models.lore_editor]
-# profile_id = "openai"
-# temperature = 0.2
-#
-# 可选：为不同 Agent 叠加自定义 system prompt。
-# 自定义提示在行为、创作偏好、策略和风格上优先于 Nova 内置提示，
-# 但不会覆盖工具权限、输出协议、互动禁写文件、结构化 JSON 要求和后端校验边界。
-#
-# [agent_prompts.ide]
-# system_prompt = "你在章节创作前先用更短的要点确认写作意图；正文保持冷静、克制、少解释。"
-#
-# [agent_prompts.interactive_story]
-# system_prompt = "更主动地制造 NPC 反应和场景压力，但不要替玩家做重大选择。"
-#
-# 可选：按 Agent 调整工具权限。字段不填表示继承内置默认值；
-# `web_search` 使用 Eino Ext DuckDuckGo V2 预制工具注册为网页搜索。
-#
-# [agent_tools.ide]
-# web_search = true
-#
-# [agent_tools.interactive_story]
-# web_search = false
+
+# [agent_models.interactive_story]
+# profile_id = "deepseek"
+# temperature = 0.8
 
 # 路径
 # skills_dir 是启动时加载的内置/只读 Skills 根目录。

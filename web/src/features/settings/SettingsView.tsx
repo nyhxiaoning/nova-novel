@@ -8,9 +8,12 @@ import type { RemoteModel } from './api'
 import { MODEL_PROVIDERS, CUSTOM_PROVIDER_ID, findProvider, normalizeBaseUrl } from './model-providers'
 import { FONT_OPTIONS, fontLabelKeyFor } from './font-options'
 import { settingsForLayer, useAutoSaveSettings } from './use-auto-save-settings'
+import { toast } from 'sonner'
 import { getInteractiveTellers } from '@/features/interactive/api'
 import type { Teller } from '@/features/interactive/types'
 import { InlineErrorNotice } from '@/components/common/inline-error-notice'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { LOCALE_OPTIONS } from '@/i18n'
 
 type SettingsSectionId = 'model' | 'paths' | 'appearance' | 'agent' | 'ide-editor' | 'versions' | 'interactive'
@@ -91,8 +94,11 @@ export function SettingsView({ onClose }: { onClose?: () => void }) {
     try {
       const next = await saveDraft(draft)
       applySavedSettings(next)
+      toast.success(t('settings.model.saveSuccess'))
     } catch (e) {
-      setError((e as Error).message)
+      const msg = (e as Error).message
+      setError(msg)
+      toast.error(t('settings.model.saveError'))
     } finally {
       setSaving(false)
     }
@@ -179,6 +185,7 @@ export function SettingsView({ onClose }: { onClose?: () => void }) {
             profiles={draft.model_profiles ?? []}
             effectiveProfiles={effective.model_profiles ?? []}
             onChange={setModelProfiles}
+            onSave={onSave}
           />
         </>
       ),
@@ -739,10 +746,103 @@ function TellerSelect({ label, value, effective, tellers, onChange }: {
   )
 }
 
-function ModelProfilesEditor({ profiles, effectiveProfiles, onChange }: {
+function ModelCombobox({ value, options, placeholder, onChange }: {
+  value: string
+  options: string[]
+  placeholder?: string
+  onChange: (v: string) => void
+}) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const [input, setInput] = useState(value)
+  const [search, setSearch] = useState('')
+
+  // sync external value changes
+  useEffect(() => { setInput(value) }, [value])
+
+  const filtered = options.filter((o) =>
+    o.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const selectModel = (model: string) => {
+    setInput(model)
+    setSearch('')
+    onChange(model)
+    setOpen(false)
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <div className="relative flex-1">
+        <PopoverTrigger asChild>
+          <input
+            value={input}
+            placeholder={placeholder}
+            onChange={(e) => {
+              setInput(e.target.value)
+              onChange(e.target.value)
+            }}
+            onFocus={() => options.length > 0 && setOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown' && options.length > 0) {
+                e.preventDefault()
+                setOpen(true)
+              }
+            }}
+            className={`${fieldCls} w-full cursor-default`}
+          />
+        </PopoverTrigger>
+        {options.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            tabIndex={-1}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-[var(--nova-text-faint)] hover:text-[var(--nova-text)]"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      <PopoverContent
+        align="start"
+        sideOffset={0}
+        className="w-[var(--radix-popover-trigger-width)] p-0"
+        // @ts-expect-error positionFixed exists on Radix Popover primitive
+        positionFixed
+        style={{ zIndex: 9999 }}
+      >
+        <Command>
+          <CommandInput
+            placeholder={t('settings.model.searchModels')}
+            value={search}
+            onValueChange={setSearch}
+            autoFocus
+          />
+          <CommandList>
+            <CommandEmpty>{t('settings.model.noModelsFound')}</CommandEmpty>
+            <CommandGroup>
+              {filtered.map((model) => (
+                <CommandItem
+                  key={model}
+                  value={model}
+                  onSelect={selectModel}
+                >
+                  <span className="truncate">{model}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function ModelProfilesEditor({ profiles, effectiveProfiles, onChange, onSave }: {
   profiles: ModelProfileSettings[]
   effectiveProfiles: ModelProfileSettings[]
   onChange: (profiles: ModelProfileSettings[]) => void
+  onSave: () => void
 }) {
   const { t } = useTranslation()
   const addProfile = () => {
@@ -772,6 +872,7 @@ function ModelProfilesEditor({ profiles, effectiveProfiles, onChange }: {
             index={index}
             onUpdate={updateProfile}
             onRemove={removeProfile}
+            onSave={onSave}
           />
         ))}
         <button
@@ -826,30 +927,18 @@ function DefaultModelField({ value, baseUrl, apiKey, placeholder, onChange }: {
 
   const sortedModels = [...remoteModels].sort((a, b) => a.id.localeCompare(b.id))
   const currentVal = value ?? ''
+  const modelOptions = sortedModels.map((m) => m.id)
 
   return (
     <FieldRow label={t('common.model')}>
       <div className="flex flex-1 flex-col gap-1">
         <div className="flex items-center gap-1.5">
-          {sortedModels.length > 0 ? (
-            <select
-              value={currentVal}
-              onChange={(e) => onChange(e.target.value)}
-              className={`${fieldCls} flex-1`}
-            >
-              <option value="">{placeholder}</option>
-              {sortedModels.map((m) => (
-                <option key={m.id} value={m.id}>{m.id}</option>
-              ))}
-            </select>
-          ) : (
-            <input
-              value={currentVal}
-              placeholder={placeholder}
-              onChange={(e) => onChange(e.target.value)}
-              className={`${fieldCls} flex-1`}
-            />
-          )}
+          <ModelCombobox
+            value={currentVal}
+            options={modelOptions}
+            placeholder={placeholder}
+            onChange={onChange}
+          />
           <button
             type="button"
             onClick={handleFetch}
@@ -874,11 +963,12 @@ function DefaultModelField({ value, baseUrl, apiKey, placeholder, onChange }: {
   )
 }
 
-function ModelProfileCard({ profile, index, onUpdate, onRemove }: {
+function ModelProfileCard({ profile, index, onUpdate, onRemove, onSave }: {
   profile: ModelProfileSettings
   index: number
   onUpdate: (index: number, patch: Partial<ModelProfileSettings>) => void
   onRemove: (index: number) => void
+  onSave: () => void
 }) {
   const { t } = useTranslation()
   const baseUrl = profile.openai_base_url ?? ''
@@ -992,25 +1082,12 @@ function ModelProfileCard({ profile, index, onUpdate, onRemove }: {
 
       <div className="flex flex-col gap-1.5 border-t border-[var(--nova-border)] pt-2">
         <div className="flex items-center gap-2">
-          {sortedModels.length > 0 ? (
-            <select
-              value={currentModel}
-              onChange={(e) => onUpdate(index, { openai_model: e.target.value })}
-              className={`${fieldCls} flex-1`}
-            >
-              <option value="">{t('settings.model.selectModel')}</option>
-              {sortedModels.map((m) => (
-                <option key={m.id} value={m.id}>{m.id}</option>
-              ))}
-            </select>
-          ) : (
-            <input
-              value={currentModel}
-              placeholder={t('settings.model.profileModelIdPlaceholder')}
-              onChange={(e) => onUpdate(index, { openai_model: e.target.value })}
-              className={`${fieldCls} flex-1`}
-            />
-          )}
+          <ModelCombobox
+            value={currentModel}
+            options={sortedModels.map((m) => m.id)}
+            placeholder={t('settings.model.profileModelIdPlaceholder')}
+            onChange={(v) => onUpdate(index, { openai_model: v })}
+          />
           <button
             type="button"
             onClick={handleFetchModels}
@@ -1030,6 +1107,17 @@ function ModelProfileCard({ profile, index, onUpdate, onRemove }: {
             {t('settings.model.fetchedCount', { count: sortedModels.length })}
           </div>
         )}
+      </div>
+
+      <div className="border-t border-[var(--nova-border)] pt-2">
+        <button
+          type="button"
+          onClick={onSave}
+          className="nova-nav-item inline-flex w-full items-center justify-center gap-1.5 rounded-[var(--nova-radius)] border border-[var(--nova-accent-blue)] bg-[var(--nova-accent-blue)]/10 px-2.5 py-1.5 text-xs text-[var(--nova-accent-blue)] hover:bg-[var(--nova-accent-blue)]/20"
+        >
+          <Save className="h-3.5 w-3.5" />
+          {t('settings.model.saveProfile')}
+        </button>
       </div>
     </div>
   )
