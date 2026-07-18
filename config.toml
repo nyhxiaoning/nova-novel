@@ -62,6 +62,21 @@ openai_model = "deepseek-v4-pro"
 # openai_base_url = "https://api.moonshot.cn/v1"
 # openai_model = "moonshot-v1-8k"
 
+# [[model_profiles]]
+id = "custom"
+name = "mistral"
+openai_api_key = "R0bIb3yir6hRFhnPXofKyfR0gJl1507b"
+openai_base_url = "https://api.mistral.ai/v1"
+openai_model = "mistral-medium-2604"
+
+
+id = "custom"
+name = "zenmux"
+openai_api_key = "sk-ai-v1-a1708a63c12d609edd1d2a51c079a28d604fa558202c501a8909b412a8142b27"
+openai_base_url = "https://zenmux.ai/api/v1"
+openai_model = "step-3.7-flash-free"
+
+
 # ============================
 # Agent 模型分配
 # 不填则使用顶部默认模型。
