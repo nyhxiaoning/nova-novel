@@ -124,7 +124,7 @@ corepack enable
 默认地址：
 
 - 前端：`http://localhost:5173`
-- 后端：`http://localhost:8080`
+- 后端：`http://localhost:8085`
 
 ## 模型与配置
 
@@ -143,7 +143,7 @@ export NOVA_WORKSPACE="/path/to/your-novel"
 export NOVA_DIR="./.nova"
 export NOVA_SKILLS_DIR="./skills"
 export NOVA_WEB_DIR="./web"
-export NOVA_BACKEND_PORT="8080"
+export NOVA_BACKEND_PORT="8085"
 export NOVA_FRONTEND_PORT="5173"
 ```
 

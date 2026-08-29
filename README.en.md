@@ -99,7 +99,7 @@ corepack enable
 Default addresses:
 
 - Frontend: `http://localhost:5173`
-- Backend: `http://localhost:8080`
+- Backend: `http://localhost:8085`
 
 ## Models and Configuration
 
@@ -118,7 +118,7 @@ export NOVA_WORKSPACE="/path/to/your-novel"
 export NOVA_DIR="./.nova"
 export NOVA_SKILLS_DIR="./skills"
 export NOVA_WEB_DIR="./web"
-export NOVA_BACKEND_PORT="8080"
+export NOVA_BACKEND_PORT="8085"
 export NOVA_FRONTEND_PORT="5173"
 ```
 

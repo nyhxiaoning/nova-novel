@@ -2,7 +2,7 @@
 set -e
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BACKEND_PORT="${NOVA_BACKEND_PORT:-8080}"
+BACKEND_PORT="${NOVA_BACKEND_PORT:-8085}"
 FRONTEND_PORT="${NOVA_FRONTEND_PORT:-5173}"
 FRONTEND_URL="http://localhost:${FRONTEND_PORT}"
 BACKEND_URL="http://localhost:${BACKEND_PORT}"

@@ -50,7 +50,7 @@
 | **Go 测试** | `go test ./...` |
 | **运行产物** | `cd output && ./nova --workspace /path/to/my-novel` |
 
-默认地址：前端 `http://localhost:5173`，后端 `http://localhost:8080`
+默认地址：前端 `http://localhost:5173`，后端 `http://localhost:8085`
 
 ---
 

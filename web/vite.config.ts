@@ -5,7 +5,7 @@ import path from 'path'
 import { readFileSync } from 'fs'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version?: string }
-const backendPort = process.env.NOVA_BACKEND_PORT || '8080'
+const backendPort = process.env.NOVA_BACKEND_PORT || '8085'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

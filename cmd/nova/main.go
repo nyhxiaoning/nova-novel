@@ -128,7 +128,7 @@ func defaultPort() string {
 	if v := os.Getenv("NOVA_BACKEND_PORT"); v != "" {
 		return v
 	}
-	return "8080"
+	return "8085"
 }
 
 func shouldAutoPickPort() bool {
